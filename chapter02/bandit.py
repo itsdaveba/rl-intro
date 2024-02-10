@@ -6,23 +6,27 @@ from gymnasium import spaces, register
 
 
 class ArmedBanditEnv(gym.Env):
-    def __init__(self, k):
+    def __init__(self, k, stationary=True):
         self.k = k
+        self.stationary = stationary
         self.observation_space = spaces.Discrete(1)
         self.action_space = spaces.Discrete(self.k)
         self.q_star = None
-        self.argmax = None
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
-        self.q_star = self.np_random.normal(size=self.k)
-        self.argmax = np.argmax(self.q_star)
-        return 0, {"argmax": self.argmax}
+        if self.stationary:
+            self.q_star = self.np_random.normal(size=self.k)
+        else:
+            self.q_star = np.zeros(self.k)
+        return 0, {"argmax": np.argmax(self.q_star)}
 
     def step(self, action):
         assert action in self.action_space
+        if not self.stationary:
+            self.q_star += self.np_random.normal(scale=0.01, size=self.k)
         reward = self.np_random.normal(self.q_star[action])
-        return 0, reward, False, False, {"argmax": self.argmax}
+        return 0, reward, False, False, {"argmax": np.argmax(self.q_star)}
 
     def render(self):
         samples = self.np_random.normal(self.q_star, size=(10000, self.k))
@@ -35,31 +39,36 @@ class ArmedBanditEnv(gym.Env):
 
 
 class ArmedBanditVectorEnv(gym.vector.VectorEnv):
-    def __init__(self, num_envs, max_episode_steps, k):
+    def __init__(self, num_envs, max_episode_steps, k, stationary=True):
         assert num_envs > 0
         self.max_episode_steps = max_episode_steps
         self.k = k
+        self.stationary = stationary
         observation_space = spaces.Discrete(1)
         action_space = spaces.Discrete(self.k)
         super().__init__(num_envs, observation_space, action_space)
         self.q_star = None
-        self.argmax = None
+        self._argmax = None
         self.elapsed_steps = None
 
     def reset(self, *, seed=None, options=None):
         gym.Env.reset(self, seed=seed)
-        self.q_star = self.np_random.normal(size=(self.num_envs, self.k))
-        self.argmax = np.argmax(self.q_star, axis=1)
-        self._argmax = np.ones_like(self.argmax, dtype=bool)
+        if self.stationary:
+            self.q_star = self.np_random.normal(size=(self.num_envs, self.k))
+        else:
+            self.q_star = np.zeros((self.num_envs, self.k))
+        self._argmax = np.ones(self.num_envs, dtype=bool)
         self.elapsed_steps = 0
         return np.zeros(self.num_envs, dtype=int), {
-            "argmax": self.argmax,
+            "argmax": np.argmax(self.q_star, axis=1),
             "_argmax": self._argmax
         }
 
     def step(self, action):
         assert action in self.action_space
         action = np.expand_dims(action, axis=1)
+        if not self.stationary:
+            self.q_star += self.np_random.normal(scale=0.01, size=(self.num_envs, self.k))
         loc = np.take_along_axis(self.q_star, action, axis=1)
         reward = self.np_random.normal(loc)
         self.elapsed_steps += 1
@@ -72,7 +81,7 @@ class ArmedBanditVectorEnv(gym.vector.VectorEnv):
             reward.squeeze(axis=1),
             np.zeros(self.num_envs, dtype=bool),
             truncated,
-            {"argmax": self.argmax, "_argmax": self._argmax}
+            {"argmax": np.argmax(self.q_star, axis=1), "_argmax": self._argmax}
         )
 
     def render(self, env_index=0):
