@@ -1,4 +1,5 @@
 import numpy as np
+np.seterr(divide="ignore", invalid="ignore")
 
 
 class BaseAgent:
@@ -45,7 +46,7 @@ class SampleAverageAgent(BaseAgent):
         np.put_along_axis(self.Q, action, Q + (reward - Q) / (N + 1), axis=1)
 
 
-class StepSizeAgent(BaseAgent):
+class ConstantStepSizeAgent(BaseAgent):
     def __init__(self, k, num_envs, epsilon, alpha, init_val=0.0):
         super().__init__(k, num_envs, epsilon)
         self.alpha = alpha
@@ -60,3 +61,19 @@ class StepSizeAgent(BaseAgent):
         reward = np.expand_dims(reward, axis=1)
         Q = np.take_along_axis(self.Q, action, axis=1)
         np.put_along_axis(self.Q, action, Q + self.alpha * (reward - Q), axis=1)
+
+
+class UpperConfidenceBoundAgent(SampleAverageAgent):
+    def __init__(self, k, num_envs, c):
+        super().__init__(k, num_envs, None)
+        self.c = c
+        self.t = None
+
+    def reset(self, *, seed=None):
+        super().reset(seed=seed)
+        self.t = 1
+
+    def predict(self, observation=None):
+        action = np.argmax(self.Q + self.c * np.sqrt(np.log(self.t) / self.N), axis=1)
+        self.t += 1
+        return action
