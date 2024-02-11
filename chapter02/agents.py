@@ -2,11 +2,11 @@ import numpy as np
 
 
 class BaseAgent:
-    def __init__(self, k, epsilon, num_envs=1):
+    def __init__(self, k, num_envs, epsilon):
         assert num_envs > 0
         self.k = k
-        self.epsilon = epsilon
         self.num_envs = num_envs
+        self.epsilon = epsilon
         self.np_random = None
         self.Q = None
 
@@ -28,8 +28,8 @@ class BaseAgent:
 
 
 class SampleAverageAgent(BaseAgent):
-    def __init__(self, k, epsilon, num_envs=1):
-        super().__init__(k, epsilon, num_envs)
+    def __init__(self, k, num_envs, epsilon):
+        super().__init__(k, num_envs, epsilon)
         self.N = None
 
     def reset(self, *, seed=None):
@@ -46,9 +46,14 @@ class SampleAverageAgent(BaseAgent):
 
 
 class StepSizeAgent(BaseAgent):
-    def __init__(self, k, epsilon, alpha, num_envs=1):
-        super().__init__(k, epsilon, num_envs)
+    def __init__(self, k, num_envs, epsilon, alpha, init_val=0.0):
+        super().__init__(k, num_envs, epsilon)
         self.alpha = alpha
+        self.init_val = init_val
+
+    def reset(self, *, seed=None):
+        super().reset(seed=seed)
+        self.Q += self.init_val
 
     def update(self, action, reward):
         action = np.expand_dims(action, axis=1)
