@@ -6,9 +6,10 @@ from gymnasium import spaces, register
 
 
 class ArmedBanditEnv(gym.Env):
-    def __init__(self, k, stationary=True):
+    def __init__(self, k, stationary=True, mean=0.0):
         self.k = k
         self.stationary = stationary
+        self.mean = mean
         self.observation_space = spaces.Discrete(1)
         self.action_space = spaces.Discrete(self.k)
         self.q_star = None
@@ -19,6 +20,7 @@ class ArmedBanditEnv(gym.Env):
             self.q_star = self.np_random.normal(size=self.k)
         else:
             self.q_star = np.zeros(self.k)
+        self.q_star += self.mean
         return 0, {"argmax": np.argmax(self.q_star)}
 
     def step(self, action):
@@ -39,14 +41,15 @@ class ArmedBanditEnv(gym.Env):
 
 
 class ArmedBanditVectorEnv(gym.vector.VectorEnv):
-    def __init__(self, num_envs, max_episode_steps, k, stationary=True):
+    def __init__(self, num_envs, max_episode_steps, k, stationary=True, mean=0.0):
         assert num_envs > 0
+        observation_space = spaces.Discrete(1)
+        action_space = spaces.Discrete(k)
+        super().__init__(num_envs, observation_space, action_space)
         self.max_episode_steps = max_episode_steps
         self.k = k
         self.stationary = stationary
-        observation_space = spaces.Discrete(1)
-        action_space = spaces.Discrete(self.k)
-        super().__init__(num_envs, observation_space, action_space)
+        self.mean = mean
         self.q_star = None
         self._argmax = None
         self.elapsed_steps = None
@@ -57,6 +60,7 @@ class ArmedBanditVectorEnv(gym.vector.VectorEnv):
             self.q_star = self.np_random.normal(size=(self.num_envs, self.k))
         else:
             self.q_star = np.zeros((self.num_envs, self.k))
+        self.q_star += self.mean
         self._argmax = np.ones(self.num_envs, dtype=bool)
         self.elapsed_steps = 0
         return np.zeros(self.num_envs, dtype=int), {
@@ -111,7 +115,7 @@ def run_episode(env, agent, seed=None):
 
 
 register(
-    id="ArmedBandit-v0",
+    id="ArmedBanditTestbed-v0",
     entry_point=ArmedBanditEnv,
     max_episode_steps=1000,
     vector_entry_point=ArmedBanditVectorEnv
