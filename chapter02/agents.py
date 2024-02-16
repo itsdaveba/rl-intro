@@ -1,4 +1,5 @@
 import numpy as np
+
 np.seterr(divide="ignore", invalid="ignore")
 
 
@@ -15,7 +16,7 @@ class BaseAgent:
             self.np_random = np.random.default_rng(seed)
         self.Q = np.zeros((self.num_envs, self.k))
 
-    def predict(self, observation=None):
+    def predict(self):
         raise NotImplementedError
 
     def update(self):
@@ -27,7 +28,7 @@ class EpsilonGreedyAgent(BaseAgent):
         super().__init__(k, num_envs)
         self.epsilon = epsilon
 
-    def predict(self, observation=None):
+    def predict(self):
         action = np.where(
             self.np_random.random(size=self.num_envs) < self.epsilon,
             self.np_random.choice(self.k, size=self.num_envs),
@@ -81,7 +82,7 @@ class UpperConfidenceBoundAgent(SampleAverageAgent):
         super().reset(seed=seed)
         self.t = 1
 
-    def predict(self, observation=None):
+    def predict(self):
         exploration = np.sqrt(np.log(self.t) / self.N)
         action = np.argmax(self.Q + self.c * exploration, axis=1)
         self.t += 1
@@ -103,7 +104,7 @@ class GradientAgent(BaseAgent):
         self.baseline = np.zeros((self.num_envs, 1))
         self.n = 0
 
-    def predict(self, observation=None):
+    def predict(self):
         cumpi = np.cumsum(self.pi, axis=1)
         rand = self.np_random.random(size=(self.num_envs, 1))
         action = np.argmax(rand < cumpi, axis=1)
