@@ -49,7 +49,7 @@ class GridWorld(gym.Env):
         for i in range(self.shape[0]):
             for j in range(self.shape[1]):
                 k = 0
-                if np.all(self.state == (i, j)):
+                if tuple(self.state) == (i, j):
                     print("x", end=" ")
                 else:
                     for rd_from in self.rd_from:
@@ -60,7 +60,7 @@ class GridWorld(gym.Env):
                             print(f"{self.rd_keys[self.rd_from.index(rd_from)]}'", end="")
                             break
                         k += 1
-                if k == len(self.rd_keys) and not np.all(self.state == (i, j)):
+                if k == len(self.rd_keys) and not tuple(self.state) == (i, j):
                     print(".", end=" ")
             print()
 
