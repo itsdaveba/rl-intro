@@ -60,7 +60,7 @@ class GridWorld(gym.Env):
                             print(f"{self.rd_keys[self.rd_from.index(rd_from)]}'", end="")
                             break
                         k += 1
-                if k == len(self.rd_keys):
+                if k == len(self.rd_keys) and not np.all(self.state == (i, j)):
                     print(".", end=" ")
             print()
 
