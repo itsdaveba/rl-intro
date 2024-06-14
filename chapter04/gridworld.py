@@ -8,24 +8,26 @@ from gymnasium import spaces, register
 class GridWorld(gym.Env):
     def __init__(self, shape, terminal_states=None):
         self.shape = shape
-        self.terminal_states = terminal_states
+        self.terminal_states = terminal_states if terminal_states is not None else []
         self.observation_space = spaces.MultiDiscrete(self.shape)
         self.action_space = spaces.Discrete(4)
 
-        base_reward = [0, -1]
-        self.rewards = base_reward
-        self.prob = np.zeros(self.shape + (self.action_space.n,) + self.shape + (len(self.rewards),), dtype=np.float32)
+        self.prob = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)
+        self.rewards = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)
 
         actions = np.array([[0, 1], [-1, 0], [0, -1], [1, 0]], dtype=np.int32)
         for state in product(*[range(i) for i in self.shape]):
             for action in range(self.action_space.n):
                 new_state = state + actions[action]
                 if state in self.terminal_states:
-                    self.prob[state][action][state][0] = 1.0
+                    self.prob[state][action][state] = 1.0
+                    self.rewards[state][action][state] = 0.0
                 elif np.any(new_state // self.shape):
-                    self.prob[state][action][state][1] = 1.0
+                    self.prob[state][action][state] = 1.0
+                    self.rewards[state][action][state] = -1.0
                 else:
-                    self.prob[state][action][tuple(new_state)][1] = 1.0
+                    self.prob[state][action][tuple(new_state)] = 1.0
+                    self.rewards[state][action][tuple(new_state)] = -1.0
         self.state = None
 
     def reset(self, *, seed=None, options=None):
@@ -37,11 +39,11 @@ class GridWorld(gym.Env):
     def step(self, action):
         prob = self.prob[tuple(self.state)][action]
         index = self.np_random.choice(prob.size, p=prob.flatten())
-        state, reward_index = np.divmod(index, len(self.rewards))
-        reward = self.rewards[reward_index]
-        self.state = np.array(np.divmod(state, self.shape[1]))
-        terminated = tuple(self.state) in self.terminal_states if self.terminal_states is not None else False
-        return self.state, reward, terminated, False, {"prob": prob[tuple(self.state)][reward_index]}
+        new_state = np.array(np.divmod(index, self.shape[1]))
+        reward = self.rewards[tuple(self.state)][action][tuple(new_state)]
+        terminated = tuple(self.state) in self.terminal_states
+        self.state = new_state
+        return new_state, reward, terminated, False, {"prob": prob[tuple(new_state)]}
 
     def render(self):
         for i in range(self.shape[0]):
