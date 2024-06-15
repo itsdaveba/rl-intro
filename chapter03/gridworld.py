@@ -16,7 +16,7 @@ class GridWorld(gym.Env):
         self.rd_to = {reward_dynamics[key]["from"]: reward_dynamics[key]["to"] for key in self.rd_keys}
         self.rd_rw = {reward_dynamics[key]["from"]: reward_dynamics[key]["reward"] for key in self.rd_keys}
         self.prob = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)
-        self.rewards = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)
+        self.rewards = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)  # expected rewards
 
         actions = np.array([[0, 1], [-1, 0], [0, -1], [1, 0]], dtype=np.int32)
         for state in product(*[range(i) for i in self.shape]):
