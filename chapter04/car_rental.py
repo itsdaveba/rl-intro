@@ -42,19 +42,17 @@ class CarRental(gym.Env):
                     reward_ = -ACTION_COST * (action - 1)
                 else:
                     reward_ = -ACTION_COST * abs(action)
+                if self.modified:
+                    reward_ -= PARKING_COST * (np.maximum(state_ - 1, 0) // MAX_PARKING).sum()
                 for rentals in product(*[range(MAX_RENTALS + 1)] * 2):
                     prob_rent = np.prod(np.diag(rentals_pmf[list(rentals)]))
                     rent = np.minimum(rentals, state_)
                     state__ = state_ - rent
-                    reward__ = reward_ + RENT_REWARD * rent.sum()
+                    reward = reward_ + RENT_REWARD * rent.sum()
                     for returns in product(*[range(MAX_RETURNS + 1)] * 2):
                         prob = prob_rent * np.prod(np.diag(returns_pmf[list(returns)]))
                         ret = np.minimum(returns, MAX_CARS - state__)
                         new_state = state__ + ret
-                        if self.modified:
-                            reward = reward__ - PARKING_COST * (np.maximum(new_state - 1, 0) // MAX_PARKING).sum()
-                        else:
-                            reward = reward__
                         self.prob[state][action][tuple(new_state)] += prob
                         self.rewards[state][action][tuple(new_state)] += prob * reward
         self.rewards = np.divide(self.rewards, self.prob, out=np.zeros_like(self.prob), where=self.prob != 0.0)
@@ -76,6 +74,8 @@ class CarRental(gym.Env):
             reward = -ACTION_COST * (action - 1)
         else:
             reward = -ACTION_COST * abs(action)
+        if self.modified:
+            reward -= PARKING_COST * (np.maximum(self.state - 1, 0) // MAX_PARKING).sum()
 
         rentals = self.np_random.poisson(lam=LAMBDA_RENTALS)
         rent = np.minimum(rentals, self.state)
@@ -85,8 +85,6 @@ class CarRental(gym.Env):
         returns = self.np_random.poisson(lam=LAMBDA_RETURNS)
         ret = np.minimum(returns, MAX_CARS - self.state)
         self.state += ret
-        if self.modified:
-            reward -= PARKING_COST * (np.maximum(self.state - 1, 0) // MAX_PARKING).sum()
 
         return self.state, reward, False, False, {"rentals": rentals, "returns": returns}
 
