@@ -57,12 +57,23 @@ class CarRental(gym.Env):
         return self.state, {}
 
     def step(self, action):
-        prob = self.prob[tuple(self.state)][action]
-        index = self.np_random.choice(prob.size, p=prob.flatten())
-        new_state = np.array(np.divmod(index, self.shape[1]))
-        reward = self.rewards[tuple(self.state)][action][tuple(new_state)]
-        self.state = new_state
-        return new_state, reward, False, False, {"prob": prob[tuple(new_state)]}
+        a_min = max(-self.state[1], self.state[0] - MAX_CARS)
+        a_max = min(self.state[0], MAX_CARS - self.state[1])
+        assert action >= max(-MAX_ACTION, a_min) and action <= min(MAX_ACTION, a_max)
+
+        self.state += [-action, action]
+        reward = -ACTION_COST * abs(action)
+
+        rentals = self.np_random.poisson(lam=LAMBDA_RENTALS)
+        rent = np.minimum(rentals, self.state)
+        self.state -= rent
+        reward += RENT_REWARD * rent.sum()
+
+        returns = self.np_random.poisson(lam=LAMBDA_RETURNS)
+        ret = np.minimum(returns, MAX_CARS - self.state)
+        self.state += ret
+
+        return self.state, reward, False, False, {"rentals": rentals, "returns": returns}
 
 
 register(
