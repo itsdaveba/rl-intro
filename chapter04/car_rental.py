@@ -7,19 +7,22 @@ from scipy.stats import poisson
 
 RENT_REWARD = 10.0
 ACTION_COST = 2.0
+PARKING_COST = 4.0
 
 LAMBDA_RENTALS = [3, 4]
 LAMBDA_RETURNS = [3, 2]
 
 MAX_CARS = 20
 MAX_ACTION = 5
+MAX_PARKING = 10
 
 MAX_RENTALS = 12
 MAX_RETURNS = 12
 
 
 class CarRental(gym.Env):
-    def __init__(self):
+    def __init__(self, modified=False):
+        self.modified = modified
         self.shape = (MAX_CARS + 1, MAX_CARS + 1)
         self.observation_space = spaces.MultiDiscrete(self.shape)
         self.action_space = spaces.Discrete(2 * MAX_ACTION + 1, start=-MAX_ACTION)
@@ -35,16 +38,23 @@ class CarRental(gym.Env):
             a_max = min(state[0], MAX_CARS - state[1])
             for action in range(max(-MAX_ACTION, a_min), min(MAX_ACTION, a_max) + 1):
                 state_ = np.array(state) + [-action, action]
-                reward_ = -ACTION_COST * abs(action)
+                if self.modified and action > 0:
+                    reward_ = -ACTION_COST * (action - 1)
+                else:
+                    reward_ = -ACTION_COST * abs(action)
                 for rentals in product(*[range(MAX_RENTALS + 1)] * 2):
                     prob_rent = np.prod(np.diag(rentals_pmf[list(rentals)]))
                     rent = np.minimum(rentals, state_)
                     state__ = state_ - rent
-                    reward = reward_ + RENT_REWARD * rent.sum()
+                    reward__ = reward_ + RENT_REWARD * rent.sum()
                     for returns in product(*[range(MAX_RETURNS + 1)] * 2):
                         prob = prob_rent * np.prod(np.diag(returns_pmf[list(returns)]))
                         ret = np.minimum(returns, MAX_CARS - state__)
                         new_state = state__ + ret
+                        if self.modified:
+                            reward = reward__ - PARKING_COST * (np.maximum(new_state - 1, 0) // MAX_PARKING).sum()
+                        else:
+                            reward = reward__
                         self.prob[state][action][tuple(new_state)] += prob
                         self.rewards[state][action][tuple(new_state)] += prob * reward
         self.rewards = np.divide(self.rewards, self.prob, out=np.zeros_like(self.prob), where=self.prob != 0.0)
@@ -62,7 +72,10 @@ class CarRental(gym.Env):
         assert action >= max(-MAX_ACTION, a_min) and action <= min(MAX_ACTION, a_max)
 
         self.state += [-action, action]
-        reward = -ACTION_COST * abs(action)
+        if self.modified and action > 0:
+            reward = -ACTION_COST * (action - 1)
+        else:
+            reward = -ACTION_COST * abs(action)
 
         rentals = self.np_random.poisson(lam=LAMBDA_RENTALS)
         rent = np.minimum(rentals, self.state)
@@ -72,6 +85,8 @@ class CarRental(gym.Env):
         returns = self.np_random.poisson(lam=LAMBDA_RETURNS)
         ret = np.minimum(returns, MAX_CARS - self.state)
         self.state += ret
+        if self.modified:
+            reward -= PARKING_COST * (np.maximum(self.state - 1, 0) // MAX_PARKING).sum()
 
         return self.state, reward, False, False, {"rentals": rentals, "returns": returns}
 
