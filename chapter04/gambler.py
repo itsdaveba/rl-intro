@@ -1,0 +1,48 @@
+import numpy as np
+import gymnasium as gym
+from gymnasium import spaces, register
+
+GOAL = 100
+
+
+class Gambler(gym.Env):
+    def __init__(self, prob_heads):
+        self.prob_heads = prob_heads
+        self.observation_space = spaces.Discrete(GOAL + 1)
+        self.action_space = spaces.Discrete(GOAL // 2 + 1)
+
+        self.prob = np.zeros((self.observation_space.n, self.action_space.n, self.observation_space.n), dtype=np.float32)
+        self.rewards = np.zeros((self.observation_space.n, self.action_space.n, self.observation_space.n), dtype=np.float32)  # expected rewards
+
+        for state in range(GOAL + 1):
+            a_max = min(state, GOAL - state)
+            for action in range(a_max + 1):
+                new_states = state + np.array([action, -action])
+                self.prob[state][action][new_states] = (self.prob_heads, 1.0 - self.prob_heads) if action else 1.0
+                if new_states[0] == GOAL and action:
+                    self.rewards[state][action][new_states[0]] = self.prob_heads
+        self.rewards = np.divide(self.rewards, self.prob, out=np.zeros_like(self.prob), where=self.prob != 0.0)
+        self.state = None
+
+    def reset(self, *, seed=None, options=None):
+        super().reset(seed=seed)
+        self.observation_space.seed(seed)
+        self.state = self.observation_space.sample()
+        return self.state, {}
+
+    def step(self, action):
+        a_max = min(self.state, GOAL - self.state)
+        assert action >= 0 and action <= a_max
+
+        heads = self.np_random.random() < self.prob_heads
+        self.state += action if heads else -action
+        reward = 1.0 if self.state == GOAL else 0.0
+        terminated = self.state % GOAL == 0
+
+        return self.state, reward, terminated, False, {}
+
+
+register(
+    id="Gambler-v0",
+    entry_point=Gambler
+)
