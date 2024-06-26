@@ -18,14 +18,14 @@ class GridWorld(gym.Env):
         self.prob = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)
         self.rewards = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)  # expected rewards
 
-        actions = np.array([[0, 1], [-1, 0], [0, -1], [1, 0]], dtype=np.int32)
+        self.actions = np.array([[0, 1], [-1, 0], [0, -1], [1, 0]], dtype=np.int32)
         for state in product(*[range(i) for i in self.shape]):
             for action in range(self.action_space.n):
                 if state in self.rd_from:
                     self.prob[state][action][self.rd_to[state]] = 1.0
                     self.rewards[state][action][self.rd_to[state]] = self.rd_rw[state]
                 else:
-                    new_state = state + actions[action]
+                    new_state = state + self.actions[action]
                     if np.any(new_state // self.shape):
                         self.prob[state][action][state] = 1.0
                         self.rewards[state][action][state] = -1.0
@@ -41,12 +41,18 @@ class GridWorld(gym.Env):
         return self.state, {}
 
     def step(self, action):
-        prob = self.prob[tuple(self.state)][action]
-        index = self.np_random.choice(prob.size, p=prob.flatten())
-        new_state = np.array(np.divmod(index, self.shape[1]))
-        reward = self.rewards[tuple(self.state)][action][tuple(new_state)]
+        if tuple(self.state) in self.rd_from:
+            new_state = self.rd_to[tuple(self.state)]
+            reward = self.rd_rw[tuple(self.state)]
+        else:
+            new_state = self.state + self.actions[action]
+            if np.any(new_state // self.shape):
+                new_state = self.state
+                reward = -1.0
+            else:
+                reward = 0.0
         self.state = new_state
-        return new_state, reward, False, False, {"prob": prob[tuple(new_state)]}
+        return new_state, reward, False, False, {}
 
     def render(self):
         for i in range(self.shape[0]):

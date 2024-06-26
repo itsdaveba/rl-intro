@@ -15,10 +15,10 @@ class GridWorld(gym.Env):
         self.prob = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)
         self.rewards = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)  # expected rewards
 
-        actions = np.array([[0, 1], [-1, 0], [0, -1], [1, 0]], dtype=np.int32)
+        self.actions = np.array([[0, 1], [-1, 0], [0, -1], [1, 0]], dtype=np.int32)
         for state in product(*[range(i) for i in self.shape]):
             for action in range(self.action_space.n):
-                new_state = state + actions[action]
+                new_state = state + self.actions[action]
                 if state in self.terminal_states:
                     self.prob[state][action][state] = 1.0
                     self.rewards[state][action][state] = 0.0
@@ -37,13 +37,13 @@ class GridWorld(gym.Env):
         return self.state, {}
 
     def step(self, action):
-        prob = self.prob[tuple(self.state)][action]
-        index = self.np_random.choice(prob.size, p=prob.flatten())
-        new_state = np.array(np.divmod(index, self.shape[1]))
-        reward = self.rewards[tuple(self.state)][action][tuple(new_state)]
+        new_state = self.state + self.actions[action]
+        if tuple(self.state) in self.terminal_states or np.any(new_state // self.shape):
+            new_state = self.state
+        reward = 0.0 if tuple(self.state) in self.terminal_states else -1.0
         terminated = tuple(new_state) in self.terminal_states
         self.state = new_state
-        return new_state, reward, terminated, False, {"prob": prob[tuple(new_state)]}
+        return new_state, reward, terminated, False, {}
 
     def render(self):
         for i in range(self.shape[0]):
