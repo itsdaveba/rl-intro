@@ -43,7 +43,7 @@ class GridWorld(gym.Env):
         reward = 0.0 if tuple(self.state) in self.terminal_states else -1.0
         terminated = tuple(new_state) in self.terminal_states
         self.state = new_state
-        return new_state, reward, terminated, False, {}
+        return self.state, reward, terminated, False, {}
 
     def render(self):
         for i in range(self.shape[0]):

@@ -51,8 +51,8 @@ class GridWorld(gym.Env):
                 reward = -1.0
             else:
                 reward = 0.0
-        self.state = new_state
-        return new_state, reward, False, False, {}
+        self.state = np.array(new_state)
+        return self.state, reward, False, False, {}
 
     def render(self):
         for i in range(self.shape[0]):

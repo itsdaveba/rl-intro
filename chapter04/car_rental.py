@@ -88,6 +88,9 @@ class CarRental(gym.Env):
 
         return self.state, reward, False, False, {"rentals": rentals, "returns": returns}
 
+    def render(self):
+        pass
+
 
 register(
     id="CarRental-v0",

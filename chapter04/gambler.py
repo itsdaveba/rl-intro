@@ -8,18 +8,21 @@ GOAL = 100
 class Gambler(gym.Env):
     def __init__(self, prob_heads):
         self.prob_heads = prob_heads
+        self.terminal_states = [0, GOAL]
         self.observation_space = spaces.Discrete(GOAL + 1)
-        self.action_space = spaces.Discrete(GOAL // 2 + 1)
+        self.action_space = spaces.Discrete(GOAL // 2)
 
         self.prob = np.zeros((self.observation_space.n, self.action_space.n, self.observation_space.n), dtype=np.float32)
         self.rewards = np.zeros((self.observation_space.n, self.action_space.n, self.observation_space.n), dtype=np.float32)  # expected rewards
 
         for state in range(GOAL + 1):
+            if state in self.terminal_states:
+                self.prob[state, :, state] = 1.0
             a_max = min(state, GOAL - state)
-            for action in range(a_max + 1):
-                new_states = state + np.array([action, -action])
-                self.prob[state][action][new_states] = (self.prob_heads, 1.0 - self.prob_heads) if action else 1.0
-                if new_states[0] == GOAL and action:
+            for action in range(a_max):
+                new_states = state + np.array([action + 1, -action - 1])
+                self.prob[state][action][new_states] = (self.prob_heads, 1.0 - self.prob_heads)
+                if new_states[0] == GOAL:
                     self.rewards[state][action][new_states[0]] = self.prob_heads
         self.rewards = np.divide(self.rewards, self.prob, out=np.zeros_like(self.prob), where=self.prob != 0.0)
         self.state = None
@@ -31,15 +34,21 @@ class Gambler(gym.Env):
         return self.state, {}
 
     def step(self, action):
+        if self.state in self.terminal_states:
+            return self.state, 0.0, True, False, {}
+
         a_max = min(self.state, GOAL - self.state)
         assert action >= 0 and action <= a_max
 
         heads = self.np_random.random() < self.prob_heads
-        self.state += action if heads else -action
+        self.state += action + 1 if heads else -action - 1
         reward = 1.0 if self.state == GOAL else 0.0
-        terminated = self.state % GOAL == 0
+        terminated = self.state in self.terminal_states
 
         return self.state, reward, terminated, False, {}
+
+    def render(self):
+        pass
 
 
 register(
