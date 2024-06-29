@@ -32,17 +32,19 @@ class GridWorld(gym.Env):
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
-        self.observation_space.seed(seed)
-        self.state = self.observation_space.sample()
+        self.state = self.np_random.integers(self.shape)
         return self.state, {}
 
     def step(self, action):
+        assert action in self.action_space
+
         new_state = self.state + self.actions[action]
         if tuple(self.state) in self.terminal_states or np.any(new_state // self.shape):
             new_state = self.state
         reward = 0.0 if tuple(self.state) in self.terminal_states else -1.0
         terminated = tuple(new_state) in self.terminal_states
         self.state = new_state
+
         return self.state, reward, terminated, False, {}
 
     def render(self):

@@ -60,8 +60,7 @@ class CarRental(gym.Env):
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
-        self.observation_space.seed(seed)
-        self.state = self.observation_space.sample()
+        self.state = self.np_random.integers(self.shape)
         return self.state, {}
 
     def step(self, action):

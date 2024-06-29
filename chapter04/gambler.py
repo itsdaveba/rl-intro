@@ -29,8 +29,7 @@ class Gambler(gym.Env):
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
-        self.observation_space.seed(seed)
-        self.state = self.observation_space.sample()
+        self.state = self.np_random.integers(GOAL + 1)
         return self.state, {}
 
     def step(self, action):
@@ -38,7 +37,7 @@ class Gambler(gym.Env):
             return self.state, 0.0, True, False, {}
 
         a_max = min(self.state, GOAL - self.state)
-        assert action >= 0 and action <= a_max
+        assert action >= 0 and action < a_max
 
         heads = self.np_random.random() < self.prob_heads
         self.state += action + 1 if heads else -action - 1
