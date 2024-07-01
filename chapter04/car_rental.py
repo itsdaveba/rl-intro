@@ -27,7 +27,7 @@ class CarRental(gym.Env):
         self.observation_space = spaces.MultiDiscrete(self.shape)
         self.action_space = spaces.Discrete(2 * MAX_ACTION + 1, start=-MAX_ACTION)
 
-        self.prob = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)
+        self.prob = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)  # transition probability
         self.rewards = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)  # expected rewards
 
         rentals_pmf = poisson.pmf([[i, i] for i in range(MAX_RENTALS + 1)], mu=LAMBDA_RENTALS)
@@ -37,22 +37,22 @@ class CarRental(gym.Env):
             a_min = max(-state[1], state[0] - MAX_CARS)
             a_max = min(state[0], MAX_CARS - state[1])
             for action in range(max(-MAX_ACTION, a_min), min(MAX_ACTION, a_max) + 1):
-                state_ = np.array(state) + [-action, action]
+                _state = np.array(state) + [-action, action]
                 if self.modified and action > 0:
-                    reward_ = -ACTION_COST * (action - 1)
+                    _reward = -ACTION_COST * (action - 1)
                 else:
-                    reward_ = -ACTION_COST * abs(action)
+                    _reward = -ACTION_COST * abs(action)
                 if self.modified:
-                    reward_ -= PARKING_COST * (np.maximum(state_ - 1, 0) // MAX_PARKING).sum()
+                    _reward -= PARKING_COST * (np.maximum(_state - 1, 0) // MAX_PARKING).sum()
                 for rentals in product(*[range(MAX_RENTALS + 1)] * 2):
                     prob_rent = np.prod(np.diag(rentals_pmf[list(rentals)]))
-                    rent = np.minimum(rentals, state_)
-                    state__ = state_ - rent
-                    reward = reward_ + RENT_REWARD * rent.sum()
+                    rent = np.minimum(rentals, _state)
+                    __state = _state - rent
+                    reward = _reward + RENT_REWARD * rent.sum()
                     for returns in product(*[range(MAX_RETURNS + 1)] * 2):
                         prob = prob_rent * np.prod(np.diag(returns_pmf[list(returns)]))
-                        ret = np.minimum(returns, MAX_CARS - state__)
-                        new_state = state__ + ret
+                        ret = np.minimum(returns, MAX_CARS - __state)
+                        new_state = __state + ret
                         self.prob[state][action][tuple(new_state)] += prob
                         self.rewards[state][action][tuple(new_state)] += prob * reward
         self.rewards = np.divide(self.rewards, self.prob, out=np.zeros_like(self.prob), where=self.prob != 0.0)
