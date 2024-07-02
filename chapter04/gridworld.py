@@ -12,7 +12,7 @@ class GridWorld(gym.Env):
         self.observation_space = spaces.MultiDiscrete(self.shape)
         self.action_space = spaces.Discrete(4)
 
-        self.prob = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)
+        self.prob = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)  # transition probability
         self.rewards = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)  # expected rewards
 
         self.actions = np.array([[0, 1], [-1, 0], [0, -1], [1, 0]], dtype=np.int32)
@@ -33,6 +33,8 @@ class GridWorld(gym.Env):
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
         self.state = self.np_random.integers(self.shape)
+        while tuple(self.state) in self.terminal_states:
+            self.state = self.np_random.integers(self.shape)
         return self.state, {}
 
     def step(self, action):

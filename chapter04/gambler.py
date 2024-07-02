@@ -12,7 +12,7 @@ class Gambler(gym.Env):
         self.observation_space = spaces.Discrete(GOAL + 1)
         self.action_space = spaces.Discrete(GOAL // 2)
 
-        self.prob = np.zeros((self.observation_space.n, self.action_space.n, self.observation_space.n), dtype=np.float32)
+        self.prob = np.zeros((self.observation_space.n, self.action_space.n, self.observation_space.n), dtype=np.float32)  # transition probability
         self.rewards = np.zeros((self.observation_space.n, self.action_space.n, self.observation_space.n), dtype=np.float32)  # expected rewards
 
         for state in range(GOAL + 1):
@@ -30,6 +30,8 @@ class Gambler(gym.Env):
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
         self.state = self.np_random.integers(GOAL + 1)
+        while self.state in self.terminal_states:
+            self.state = self.np_random.integers(GOAL + 1)
         return self.state, {}
 
     def step(self, action):

@@ -107,8 +107,12 @@ class Blackjack(gym.Env):
 
     def reset(self, *, seed=None, options=None):
         super().reset(seed=seed)
-        self.player = list(self.np_random.choice(DECK, size=2))
-        self.dealer = list(self.np_random.choice(DECK, size=2))
+        if options is not None and "init_state" in options:
+            self.player = options["init_state"]["player"].copy()
+            self.dealer = options["init_state"]["dealer"].copy()
+        else:
+            self.player = list(self.np_random.choice(DECK, size=2))
+            self.dealer = list(self.np_random.choice(DECK, size=2))
 
         player_sum, soft_hand = sum_hand(self.player)
         while player_sum < PLAYER_MIN:
