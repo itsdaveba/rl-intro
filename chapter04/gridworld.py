@@ -13,7 +13,7 @@ class GridWorld(gym.Env):
         self.action_space = spaces.Discrete(4)
 
         self.prob = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)  # transition probability
-        self.rewards = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)  # expected rewards
+        self.rewards = np.zeros(self.shape + (self.action_space.n,), dtype=np.float32)  # expected rewards
 
         self.actions = np.array([[0, 1], [-1, 0], [0, -1], [1, 0]], dtype=np.int32)
         for state in product(*[range(i) for i in self.shape]):
@@ -21,13 +21,12 @@ class GridWorld(gym.Env):
                 new_state = state + self.actions[action]
                 if state in self.terminal_states:
                     self.prob[state][action][state] = 1.0
-                    self.rewards[state][action][state] = 0.0
                 elif np.any(new_state // self.shape):
                     self.prob[state][action][state] = 1.0
-                    self.rewards[state][action][state] = -1.0
+                    self.rewards[state][action] = -1.0
                 else:
                     self.prob[state][action][tuple(new_state)] = 1.0
-                    self.rewards[state][action][tuple(new_state)] = -1.0
+                    self.rewards[state][action] = -1.0
         self.state = None
 
     def reset(self, *, seed=None, options=None):

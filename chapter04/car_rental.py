@@ -28,7 +28,7 @@ class CarRental(gym.Env):
         self.action_space = spaces.Discrete(2 * MAX_ACTION + 1, start=-MAX_ACTION)
 
         self.prob = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)  # transition probability
-        self.rewards = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)  # expected rewards
+        self.rewards = np.zeros(self.shape + (self.action_space.n,), dtype=np.float32)  # expected rewards
 
         rentals_pmf = poisson.pmf([[i, i] for i in range(MAX_RENTALS + 1)], mu=LAMBDA_RENTALS)
         returns_pmf = poisson.pmf([[i, i] for i in range(MAX_RETURNS + 1)], mu=LAMBDA_RETURNS)
@@ -54,8 +54,7 @@ class CarRental(gym.Env):
                         ret = np.minimum(returns, MAX_CARS - __state)
                         new_state = __state + ret
                         self.prob[state][action][tuple(new_state)] += prob
-                        self.rewards[state][action][tuple(new_state)] += prob * reward
-        self.rewards = np.divide(self.rewards, self.prob, out=np.zeros_like(self.prob), where=self.prob != 0.0)
+                        self.rewards[state][action] += prob * reward
         self.state = None
 
     def reset(self, *, seed=None, options=None):

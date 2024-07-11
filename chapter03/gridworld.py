@@ -16,22 +16,21 @@ class GridWorld(gym.Env):
         self.rd_to = {reward_dynamics[key]["from"]: reward_dynamics[key]["to"] for key in self.rd_keys}
         self.rd_rw = {reward_dynamics[key]["from"]: reward_dynamics[key]["reward"] for key in self.rd_keys}
         self.prob = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)  # transition probability
-        self.rewards = np.zeros(self.shape + (self.action_space.n,) + self.shape, dtype=np.float32)  # expected rewards
+        self.rewards = np.zeros(self.shape + (self.action_space.n,), dtype=np.float32)  # expected rewards
 
         self.actions = np.array([[0, 1], [-1, 0], [0, -1], [1, 0]], dtype=np.int32)
         for state in product(*[range(i) for i in self.shape]):
             for action in range(self.action_space.n):
                 if state in self.rd_from:
                     self.prob[state][action][self.rd_to[state]] = 1.0
-                    self.rewards[state][action][self.rd_to[state]] = self.rd_rw[state]
+                    self.rewards[state][action] = self.rd_rw[state]
                 else:
                     new_state = state + self.actions[action]
                     if np.any(new_state // self.shape):
                         self.prob[state][action][state] = 1.0
-                        self.rewards[state][action][state] = -1.0
+                        self.rewards[state][action] = -1.0
                     else:
                         self.prob[state][action][tuple(new_state)] = 1.0
-                        self.rewards[state][action][tuple(new_state)] = 0.0
         self.state = None
 
     def reset(self, *, seed=None, options=None):
