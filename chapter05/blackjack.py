@@ -31,7 +31,7 @@ class Blackjack(gym.Env):
         self.action_space = spaces.Discrete(NUM_ACTIONS)
 
         self.prob = np.zeros(nvec + (self.action_space.n,) + nvec, dtype=np.float32)  # transition probability
-        self.rewards = np.zeros(nvec + (self.action_space.n,) + nvec, dtype=np.float32)  # expected rewards
+        self.rewards = np.zeros(nvec + (self.action_space.n,), dtype=np.float32)  # expected rewards
 
         # rows: 17, 18, 19, 20, 21, bust
         prob_dealer = np.zeros((PLAYER_MAX - DEALER_SFROM + 2, DEALER_SFROM + UNIQUE_CARDS - 1), dtype=np.float32)
@@ -85,12 +85,11 @@ class Blackjack(gym.Env):
                                     new_state = (min(_player_sum, PLAYER_MAX + 1) - PLAYER_MIN, dealer_card, _soft_hand)
                                     self.prob[state][action][new_state] += 1 / len(DECK)
                                     if new_state[0] + PLAYER_MIN > PLAYER_MAX:
-                                        self.rewards[state][action][new_state] -= 1 / len(DECK)
+                                        self.rewards[state][action] -= 1 / len(DECK)
                             else:  # stand
                                 new_state = (player_sum - PLAYER_MIN, 0, soft_hand)
                                 self.prob[state][action][new_state] = 1.0
-                                self.rewards[state][action][new_state] = (outcome[:, player_sum - PLAYER_MIN] * prob_dealer[:, dealer_card - 1]).sum()
-        self.rewards = np.divide(self.rewards, self.prob, out=np.zeros_like(self.prob), where=self.prob != 0.0)
+                                self.rewards[state][action] += (outcome[:, player_sum - PLAYER_MIN] * prob_dealer[:, dealer_card - 1]).sum()
 
         self.player = None
         self.dealer = None
